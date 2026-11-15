@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gofiber/fiber/v2"
@@ -45,7 +46,24 @@ func main() {
 	routes.Register(app, h)
 
 	log.Info("server starting", zap.String("port", cfg.Port))
-	if err := app.Listen(":" + cfg.Port); err != nil {
-		log.Fatal("server stopped", zap.Error(err))
-	}
+	var pingErr error
+
+for i := 1; i <= 10; i++ {
+    pingErr = db.PingContext(context.Background())
+
+    if pingErr == nil {
+        break
+    }
+
+    log.Warn("waiting for db",
+        zap.Int("attempt", i),
+        zap.Error(pingErr),
+    )
+
+    time.Sleep(2 * time.Second)
+}
+
+if pingErr != nil {
+    log.Fatal("cannot connect to db", zap.Error(pingErr))
+}
 }
